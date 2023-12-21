@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+import pandas as pd
+from pathlib import Path
+import argparse
+
+def read_file(file_path, encoding='Windows-1251'):
+    try:
+        extension = file_path.suffix.lower()
+        if extension == '.csv':
+            return pd.read_csv(file_path, encoding=encoding)
+        elif extension == '.xlsx':
+            return pd.read_excel(file_path, engine='openpyxl')
+        else:
+            raise ValueError(f"Unsupported file format: {extension}")
+    except Exception as e:
+        raise RuntimeError(f"Error reading file {file_path}: {e}")
+
+def main():
+    parser = argparse.ArgumentParser(description='Merge CSV and Excel files based on specified field.')
+    parser.add_argument('file1', help='Path to the first CSV file or Excel file')
+    parser.add_argument('file2', help='Path to the second CSV file or Excel file')
+    parser.add_argument('--on', default='Телефон', help='Field to merge on (default: "Телефон")')
+    parser.add_argument('--output', default='merged_file.csv', help='Output file name (default: merged_file.csv)')
+    parser.add_argument('--encoding', default='Windows-1251', help='Encoding for CSV files (default: Windows-1251)')
+    parser.add_argument('--how', default='inner', choices=['inner', 'outer', 'left', 'right'],
+                        help='Type of merge (default: inner)')
+    args = parser.parse_args()
+
+    file1_path = Path(args.file1)
+    file2_path = Path(args.file2)
+
+    # Validate input file existence
+    if not file1_path.is_file() or not file2_path.is_file():
+        print("Error: One or both input files do not exist.")
+        return
+
+    try:
+        # Read data from the files
+        df1 = read_file(file1_path, encoding=args.encoding)
+        df2 = read_file(file2_path, encoding=args.encoding)
+
+        # Merge dataframes on specified field (default is 'Телефон')
+        merged_df = pd.merge(df1, df2, on=args.on, how=args.how)
+
+        # Save merged DataFrame to the specified output file
+        merged_file_path = args.output
+        merged_df.to_csv(merged_file_path, index=False)
+
+        print(f"Merging completed. Result saved to {merged_file_path}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()

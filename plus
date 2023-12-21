@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import glob
+import csv
+
+class PhoneNumberFormatter:
+    def __init__(self, column_index=0, delimiter=','):
+        self.column_index = column_index
+        self.delimiter = delimiter
+
+    def add_plus_to_number(self, number):
+        number = str(number)
+
+        if number.startswith('9') and len(number) == 10:
+            return '+7' + number
+
+        if number.startswith('79') and len(number) == 11:
+            return '+' + number
+
+        if number.startswith('+79') and len(number) == 12:
+            return number
+
+        if number.startswith('89') and len(number) == 11:
+            return '+7' + number[1:]
+
+        return None
+
+    def process_file(self, file):
+        with open(file, 'r', newline='', encoding='utf-8') as f:
+            reader = csv.reader(f, delimiter=self.delimiter)
+            header = next(reader, [])  # Assuming the CSV has a header
+
+            if not header:
+                print(f"Error: The CSV file {file} is empty.")
+                return file, None
+
+            lines = [row[self.column_index] for row in reader if len(row) > self.column_index]
+            updated_lines = [self.add_plus_to_number(line.strip()) for line in lines]
+            updated_content = '\n'.join(line for line in updated_lines if line is not None)
+
+            return file, updated_content  # Return filename and its updated content
+
+    def process_files(self, files):
+        results = []
+
+        for file in files:
+            result = self.process_file(file)
+            if result[1] is not None:
+                results.append(result)
+
+        for file, updated_content in results:
+            with open(file, 'w', newline='', encoding='utf-8') as f:
+                f.write(updated_content)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: plus <input_file> [input_file2 ...] [--column_index INDEX] [--delimiter DELIMITER]")
+        sys.exit(1)
+
+    input_files = sys.argv[1:]
+    column_index = 0
+    delimiter = ','
+
+    # Parse command line arguments
+    for i in range(1, len(sys.argv) - 1):
+        if sys.argv[i] == '--column_index':
+            column_index = int(sys.argv[i + 1])
+        elif sys.argv[i] == '--delimiter':
+            delimiter = sys.argv[i + 1]
+
+    formatter = PhoneNumberFormatter(column_index, delimiter)
+    files_to_process = []
+
+    for input_file in input_files:
+        if "*" in input_file or "?" in input_file:
+            matching_files = glob.glob(input_file)
+            files_to_process.extend(matching_files)
+        else:
+            files_to_process.append(input_file)
+
+    formatter.process_files(files_to_process)
+

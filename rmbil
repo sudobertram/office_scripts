@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+
+import csv
+import sys
+import tempfile
+import shutil
+
+def filter_csv_inplace(file_path):
+    try:
+        temp_file_path = tempfile.NamedTemporaryFile(mode='w', delete=False, newline='', encoding='utf-8').name
+
+        with open(file_path, 'r', newline='', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            header = next(reader)
+            rows_to_keep = [header]
+
+            for row in reader:
+                if "Вымпел-Коммуникации" not in row[1]:  # Check the second column (operator)
+                    rows_to_keep.append(row)
+
+        with open(temp_file_path, 'w', newline='', encoding='utf-8') as temp_file:
+            writer = csv.writer(temp_file)
+            writer.writerows(rows_to_keep)
+
+        shutil.move(temp_file_path, file_path)
+
+        print(f"File {file_path} successfully processed.")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: rmbil <path_to_your_file.csv>")
+    else:
+        input_path = sys.argv[1]
+        filter_csv_inplace(input_path)

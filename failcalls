@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+
+import argparse
+import csv
+from glob import glob
+
+
+class CsvCallsProcessor:
+    def __init__(self, input_filename, output_filename):
+        self.input_filename = input_filename
+        self.output_filename = output_filename
+        self.status_counts = {}
+
+    def process_csv(self):
+        try:
+            with open(self.input_filename, 'r', encoding='utf-8') as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',')
+
+                with open(self.output_filename, 'w', encoding='utf-8', newline='') as new_file:
+                    csv_writer = csv.writer(new_file)
+
+                    for row in csv_reader:
+                        phone_number = row[0]
+                        call_status = row[1]
+
+                        if call_status in ['Success', 'Abandoned', 'ShortCall'] and phone_number not in ['', 'Телефон']:
+                            self.update_status_counts(call_status)
+                            continue
+
+                        csv_writer.writerow([phone_number])
+                        self.update_status_counts(call_status)
+
+            print(
+                f"Processing completed. Results saved to {self.output_filename}")
+
+        except FileNotFoundError:
+            print(f"Error: Input file {self.input_filename} not found.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    def update_status_counts(self, call_status):
+        row_name = 'Статус Вызова'
+        if call_status == row_name:
+            return
+
+        if call_status in self.status_counts:
+            self.status_counts[call_status] += 1
+        else:
+            self.status_counts[call_status] = 1
+
+    def make_report(self):
+        print(f"\n===> {self.input_filename} <===")
+        print(
+            f"Lines in input file: {self.get_line_count(self.input_filename)}")
+        print(
+            f"Lines in output file: {self.get_line_count(self.output_filename)}\n")
+
+        for status, count in self.status_counts.items():
+            if status in ['NoAnswer', 'Failure', 'Abandoned', 'Success', 'ShortCall']:
+                print(f"{status}: {count}")
+
+    @staticmethod
+    def get_line_count(filename):
+        try:
+            with open(filename, 'r', encoding='utf-8') as file:
+                return sum(1 for line in file)
+        except FileNotFoundError:
+            return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Process CSV files.")
+    parser.add_argument("input_files", nargs='+',
+                        help="Input CSV files or glob patterns")
+    args = parser.parse_args()
+
+    for input_file in args.input_files:
+        for filename in glob(input_file):
+            # Set output filename to be the same as input but with a .contacts extension
+            output_filename = f"{filename.rsplit('.', 1)[0]}.contacts"
+
+            processor = CsvCallsProcessor(filename, output_filename)
+            processor.process_csv()
+
+            # Make report only after processing each input file
+            processor.make_report()
+
+
+if __name__ == "__main__":
+    main()

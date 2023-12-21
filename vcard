@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import shutil
+
+
+class VcardCreator():
+    def __init__(self, path=None, vcf_size=1000, directory_to_save='Contacts'):
+        self.directory_to_save = directory_to_save
+        self.path = path
+        self.vcf_size = vcf_size
+        
+    def is_valid_path(self, path):
+        if not isinstance(path, str):
+            return False
+
+        try:
+            path = os.path.abspath(path)
+            if not os.path.exists(path):
+                return False
+            return True
+        except (PermissionError, FileNotFoundError, IsADirectoryError):
+            return False
+    
+    def get_number_format(self, phone_number): 
+        phone_number = str(phone_number)
+        phonestart = phone_number.startswith
+        phone_lenght = len(phone_number)
+        if phonestart('+7') and phone_lenght == 12:
+            return '+7'
+        if phonestart('7') and phone_lenght == 11:
+            return '7'
+        if phonestart('9') and phone_lenght == 10:
+            return '9'
+        return None
+
+    def create_contact(self, phone_number):
+        phone_number = str(phone_number).strip()
+        phone_format = self.get_number_format(phone_number)
+        match phone_format:
+            case '+7':
+                phone_number = phone_number
+            case '7':
+                phone_number = '+' + phone_number
+            case '9':
+                phone_number = '+7' + phone_number
+            case _:
+                return
+        contact = f'BEGIN:VCARD\nVERSION:3.0\nTEL:{phone_number}\nEND:VCARD'
+        return contact
+    
+    def make_dir_to_save(self):
+        try:
+            if not os.path.exists(self.directory_to_save):
+                os.makedirs(self.directory_to_save)
+        except OSError as e:
+            print(f"Error creating directory: {str(e)}")
+
+
+    def create_vcf_files(self):        
+        vcf_count = 0
+        current_vcf_size = 0
+        current_vcf_contacts = []
+
+        try:
+            with open(self.path, 'r') as file:
+                for line in file:
+                    phone_number = line.strip()
+                    contact = self.create_contact(phone_number)
+                    if contact:
+                        current_vcf_contacts.append(contact)
+                        current_vcf_size += 1
+
+                        if current_vcf_size >= self.vcf_size:
+                            vcf_filename = os.path.join(self.directory_to_save, f'{vcf_count:04d}.vcf')
+                            with open(vcf_filename, 'w') as vcf_file:
+                                vcf_file.write('\n'.join(current_vcf_contacts))
+                            vcf_count += 1
+                            current_vcf_size = 0
+                            current_vcf_contacts = []
+
+            # If there are remaining contacts, create another VCF file
+            if current_vcf_contacts:
+                vcf_filename = os.path.join(self.directory_to_save, f'{vcf_count:04d}.vcf')
+                with open(vcf_filename, 'w') as vcf_file:
+                    vcf_file.write('\n'.join(current_vcf_contacts))
+                vcf_count += 1
+        except FileNotFoundError as e:
+            print(f"Error reading file: {str(e)}")
+
+        return vcf_count
+    
+    def run(self):
+        if not self.is_valid_path(self.path):
+            return
+        
+        try:
+            if os.path.exists(self.directory_to_save):
+                shutil.rmtree(self.directory_to_save)
+        except Exception as e:
+            print(f"Error deleting directory: {str(e)}")
+        
+        self.make_dir_to_save()
+        vcf_count = self.create_vcf_files()
+
+        if vcf_count:
+            print(f"Created {vcf_count} VCF files in {self.directory_to_save}")
+        else:
+            print("No VCF files created.")
+
+
+
+if __name__ == '__main__':    
+    parser = argparse.ArgumentParser(description='Create VCF files from a list of phone numbers.')
+    parser.add_argument('file', help='Path to the file containing phone numbers')
+    parser.add_argument('--vcf_size', type=int, default=1000, help='Maximum number of contacts per VCF file')
+    parser.add_argument('--dir_to_save', default='Contacts', help='Directory to save the VCF files')
+
+    args = parser.parse_args()
+
+    vc = VcardCreator(path=args.file, vcf_size=args.vcf_size, directory_to_save=args.dir_to_save)
+    vc.run()
