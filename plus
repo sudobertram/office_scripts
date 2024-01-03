@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import glob
 import csv
+
 
 class PhoneNumberFormatter:
     def __init__(self, column_index=0, delimiter=','):
@@ -36,9 +36,12 @@ class PhoneNumberFormatter:
                 print(f"Error: The CSV file {file} is empty.")
                 return file, None
 
-            lines = [row[self.column_index] for row in reader if len(row) > self.column_index]
-            updated_lines = [self.add_plus_to_number(line.strip()) for line in lines]
-            updated_content = '\n'.join(line for line in updated_lines if line is not None)
+            lines = [row[self.column_index]
+                     for row in reader if len(row) > self.column_index]
+            updated_lines = [self.add_plus_to_number(
+                line.strip()) for line in lines]
+            updated_content = '\n'.join(
+                line for line in updated_lines if line is not None)
 
             return file, updated_content  # Return filename and its updated content
 
@@ -54,9 +57,11 @@ class PhoneNumberFormatter:
             with open(file, 'w', newline='', encoding='utf-8') as f:
                 f.write(updated_content)
 
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: plus <input_file> [input_file2 ...] [--column_index INDEX] [--delimiter DELIMITER]")
+        print(
+            "Usage: plus <input_file> [input_file2 ...] [--column_index INDEX] [--delimiter DELIMITER]")
         sys.exit(1)
 
     input_files = sys.argv[1:]
@@ -81,4 +86,3 @@ if __name__ == "__main__":
             files_to_process.append(input_file)
 
     formatter.process_files(files_to_process)
-
